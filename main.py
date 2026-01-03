@@ -162,7 +162,8 @@ async def lifespan(app: FastAPI):
     config = CuratorConfig(
         firecrawl_api_key=os.getenv("FIRECRAWL_API_KEY", ""),
         qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
-        qdrant_collection=os.getenv("QDRANT_COLLECTION", "commercial_reference"),
+        qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+        qdrant_collection=os.getenv("QDRANT_COLLECTION", "commercial_references"),
         embedding_model=os.getenv("EMBEDDING_MODEL", "voyage-3-lite"),
         embedding_dimension=int(os.getenv("EMBEDDING_DIMENSION", "1024")),
         chunk_size=int(os.getenv("CHUNK_SIZE", "1000")),

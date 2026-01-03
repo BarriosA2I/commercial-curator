@@ -121,8 +121,12 @@ class CuratorConfig(BaseModel):
         default="http://localhost:6333",
         description="Qdrant server URL"
     )
+    qdrant_api_key: Optional[str] = Field(
+        default=None,
+        description="Qdrant API key for cloud authentication"
+    )
     qdrant_collection: str = Field(
-        default="commercial_reference",
+        default="commercial_references",
         description="Qdrant collection name"
     )
     
@@ -695,7 +699,10 @@ class QdrantIndexer:
         self.collection_name = config.qdrant_collection
         
         if QDRANT_AVAILABLE:
-            self.client = QdrantClient(url=config.qdrant_url)
+            self.client = QdrantClient(
+                url=config.qdrant_url,
+                api_key=config.qdrant_api_key
+            )
             self._ensure_collection()
         else:
             self.client = None
