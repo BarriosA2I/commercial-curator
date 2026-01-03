@@ -868,15 +868,15 @@ class QdrantIndexer:
         """Get collection statistics"""
         if not self.client:
             return {"status": "unavailable"}
-        
+
         try:
             info = self.client.get_collection(self.collection_name)
             return {
                 "collection": self.collection_name,
                 "points_count": info.points_count,
-                "vectors_count": info.vectors_count,
-                "indexed_vectors_count": info.indexed_vectors_count,
-                "status": info.status
+                "vectors_count": getattr(info, 'vectors_count', info.points_count),
+                "indexed_vectors_count": getattr(info, 'indexed_vectors_count', info.points_count),
+                "status": str(info.status)
             }
         except Exception as e:
             return {"error": str(e)}

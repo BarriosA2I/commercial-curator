@@ -36,7 +36,7 @@ services:
       - key: QDRANT_API_KEY
         sync: false
       - key: QDRANT_COLLECTION
-        value: commercial_reference
+        value: commercial_references
       
       # Embedding service
       - key: EMBEDDING_MODEL
@@ -80,7 +80,7 @@ services:
       - key: QDRANT_API_KEY
         sync: false
       - key: QDRANT_COLLECTION
-        value: commercial_reference
+        value: commercial_references
       - key: VOYAGE_API_KEY
         sync: false
       - key: REDIS_URL
