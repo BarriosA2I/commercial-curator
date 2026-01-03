@@ -1,0 +1,42 @@
+# =============================================================================
+# COMMERCIAL CURATOR - WORKER DOCKERFILE
+# =============================================================================
+# Background worker for long-running crawl jobs
+# Processes jobs from Redis queue
+# =============================================================================
+
+FROM python:3.12-slim as builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ─────────────────────────────────────────────────────────────────────────────
+FROM python:3.12-slim as production
+
+WORKDIR /app
+
+RUN groupadd -r curator && useradd -r -g curator curator
+
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY --chown=curator:curator . .
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    LOG_LEVEL=INFO
+
+USER curator
+
+# Worker runs continuously processing jobs
+CMD ["python", "worker.py"]

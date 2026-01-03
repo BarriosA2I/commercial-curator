@@ -1,0 +1,102 @@
+# =============================================================================
+# COMMERCIAL CURATOR - RENDER BLUEPRINT
+# =============================================================================
+# Agent 0: Web scraping → Chunking → Embedding → Qdrant indexing
+# Standalone worker service for the RAGNAROK video generation pipeline
+#
+# Deploy: Connect GitHub repo → Select render.yaml → Apply
+# =============================================================================
+
+services:
+  # ─────────────────────────────────────────────────────────────────────────
+  # COMMERCIAL CURATOR - Web Service (handles crawl requests)
+  # ─────────────────────────────────────────────────────────────────────────
+  - type: web
+    name: commercial-curator
+    runtime: docker
+    region: ohio  # Match Neural RAG Brain region
+    plan: starter  # $7/mo - sufficient for crawl orchestration
+    
+    # Health check
+    healthCheckPath: /health
+    
+    # Build settings
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    
+    # Environment variables
+    envVars:
+      # Firecrawl API
+      - key: FIRECRAWL_API_KEY
+        sync: false  # Set manually as secret
+      
+      # Qdrant (shared with Neural RAG Brain)
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_COLLECTION
+        value: commercial_reference
+      
+      # Embedding service
+      - key: EMBEDDING_MODEL
+        value: voyage-3-lite
+      - key: VOYAGE_API_KEY
+        sync: false
+      
+      # Service config
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PORT
+        value: "8100"
+      
+      # Rate limiting
+      - key: REQUESTS_PER_MINUTE
+        value: "20"
+      
+      # Circuit breaker
+      - key: CIRCUIT_FAILURE_THRESHOLD
+        value: "5"
+      - key: CIRCUIT_RECOVERY_TIMEOUT
+        value: "60"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # BACKGROUND WORKER - Long-running crawl jobs (optional)
+  # ─────────────────────────────────────────────────────────────────────────
+  - type: worker
+    name: commercial-curator-worker
+    runtime: docker
+    region: ohio
+    plan: starter  # $7/mo
+    
+    dockerfilePath: ./Dockerfile.worker
+    dockerContext: .
+    
+    envVars:
+      - key: FIRECRAWL_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_COLLECTION
+        value: commercial_reference
+      - key: VOYAGE_API_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: curator-redis
+          type: redis
+          property: connectionString
+      - key: LOG_LEVEL
+        value: INFO
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # REDIS - Job queue for async crawl operations
+  # ─────────────────────────────────────────────────────────────────────────
+  - type: redis
+    name: curator-redis
+    region: ohio
+    plan: starter  # $10/mo
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []  # Allow all (internal only)
