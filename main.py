@@ -166,6 +166,7 @@ async def lifespan(app: FastAPI):
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "commercial_references"),
         embedding_model=os.getenv("EMBEDDING_MODEL", "voyage-3-lite"),
         embedding_dimension=int(os.getenv("EMBEDDING_DIMENSION", "1024")),
+        voyage_api_key=os.getenv("VOYAGE_API_KEY"),
         chunk_size=int(os.getenv("CHUNK_SIZE", "1000")),
         chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "200")),
         requests_per_minute=int(os.getenv("REQUESTS_PER_MINUTE", "20")),

@@ -115,6 +115,10 @@ class CuratorConfig(BaseModel):
         default=1024,
         description="Embedding vector dimension"
     )
+    voyage_api_key: Optional[str] = Field(
+        default=None,
+        description="Voyage AI API key for embeddings"
+    )
     
     # Qdrant settings
     qdrant_url: str = Field(
@@ -651,36 +655,50 @@ class SemanticChunker:
 
 
 # =============================================================================
-# EMBEDDING SERVICE (Stub - replace with actual implementation)
+# EMBEDDING SERVICE
 # =============================================================================
 
+try:
+    import voyageai
+    VOYAGE_AVAILABLE = True
+except ImportError:
+    VOYAGE_AVAILABLE = False
+    logger.warning("voyageai not installed - embeddings will use fallback")
+
 class EmbeddingService:
-    """Embedding generation service"""
-    
+    """Embedding generation service using Voyage AI"""
+
     def __init__(self, config: CuratorConfig):
         self.model = config.embedding_model
         self.dimension = config.embedding_dimension
-        
-        # In production, this would use Voyage AI, OpenAI, etc.
-        self.client = None
-    
+        self.api_key = config.voyage_api_key
+
+        if VOYAGE_AVAILABLE and self.api_key:
+            self.client = voyageai.Client(api_key=self.api_key)
+            logger.info(f"Voyage AI client initialized with model: {self.model}")
+        else:
+            self.client = None
+            if not self.api_key:
+                logger.warning("VOYAGE_API_KEY not set - embeddings disabled")
+
     async def embed_texts(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings for texts"""
-        # STUB: In production, call actual embedding API
-        # Example with Voyage AI:
-        # response = await self.client.embed(
-        #     model=self.model,
-        #     texts=texts
-        # )
-        # return response.embeddings
-        
-        # Placeholder: return random vectors (replace with actual embeddings)
-        import random
-        return [
-            [random.random() for _ in range(self.dimension)]
-            for _ in texts
-        ]
-    
+        """Generate embeddings for texts using Voyage AI"""
+        if not self.client:
+            raise ValueError("Embedding service not configured - VOYAGE_API_KEY required")
+
+        try:
+            # Voyage AI embed call (synchronous, wrap in executor for async)
+            import asyncio
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: self.client.embed(texts, model=self.model)
+            )
+            return result.embeddings
+        except Exception as e:
+            logger.error(f"Voyage AI embedding failed: {e}")
+            raise
+
     async def embed_query(self, query: str) -> List[float]:
         """Generate embedding for a query"""
         embeddings = await self.embed_texts([query])
